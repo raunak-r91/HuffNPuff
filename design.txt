@@ -1,0 +1,376 @@
+CS3217 Problem Set 5
+=======================================================
+
+SECTION 1: RULES & HOW THE GAME WORKS
+
+The main objective of the game is to kill the pig. If the pig is killed before the wolf's lives run out, then the user wins. There are blocks in the way to stop the wolf's breath from reaching the pig. If the breath collides with a straw block, then the block is destroyed, while the breath's power is halved. For other blocks, the breath itself is destroyed but an impulse is imparted onto the blocks. 
+
+* The game begins on the main screen, which has two buttons to allow the user to enter different modes: Design Mode and Play Mode
+* In the Design Mode, the user can move objects from the palette on to the main game area. Only 1 wolf and pig can be added. However the user can add multiple blocks
+	- The game objects can be moved around, zoomed in/out and rotated. Additionally, clicking on a block once will change its type. Finally, the objects can be double-tapped to move them back to the palette.
+	- The user can click on the save button to save the current level. After entering the file name, the level will be saved.
+	- On clicking the load button, a menu with all the saved files is displayed. The user can click on any file to load that level.
+	- On clicking the reset button, all objects in the game area are moved back to the palette
+	- On clicking the back button, the user can go back to the main menu
+
+* In the Play Mode, the user is first asked to select the level which he wants to play.Once the user clicks the level name, all objects are loaded and the game starts.
+	- On clicking the wolf once, a direction arrow and power bar appears. The user can rotate the arrow to set the desired angle of firing the breath. The power bar increases and decreases continously and stops when the user clicks on the wolf again.
+	- On the second tap on the wolf, a new breath projectile is fired from the wolf's mouth. The projectile moves across the game area depending on the power and angle imparted, and it interacts with the various objects as described above.
+	- Initially when no breath is fired, then the pig's health is not reduced by falling etc. Once the breath is fired, then any collision with the breath itself, or other blocks and walls reduces the pig's health.
+	- The breath is destroyed if it collides with the pig or a block other than the straw block. If the breath is not destroyed within 5 seconds, then it self-destructs.
+	- Once the pig dies, or the wolf runs out of breaths, the game is over. A message is displayed with the final score. 
+	- At any time, the user can click on the Load button to load a new level to play.
+	- the user can click on the restart buttton to restart the level.
+	- The user can click on the back button to go back to the main screen.
+
+=======================================================
+
+SECTION 2:
+PART 1: WOLF BREATH DIRECTION & POWER
+
+* Input for angle: As described above. Implemented through one finger rotation. The arrow can be rotated from -60 degrees to 75 degrees. During rotation, the image of the arrow changes from purple to red. The angle of the arrow in the previous turn is stored, and the arrow is displayed accordingly. 
+
+* Input for power: As described above. The power bar continuously increases and decreases. Therefore the user must tap the wolf at the right time to launch the projectile with the desired power.
+
+* Animations: I have used the following animations for the wolf power and direction:
+	- Animation for power bar to increase and decrease continuously.
+	- Wind suck animation when the wolf is in the process of firing the breath
+	- Animation for the wolf image to inhale and exhale while releasing the breath.
+
+* Integration with physics engine: In the physics engine, an impulse is applied on the various objects depending on the velocity of the object. Therefore, faster moving objects apply a higher impulse. I used this feature to integrate the wolf breath's power. Depending on when the user stops the power meter, the proportion of power is calculated. The angle of launching is also recorded. The breath is then launched with an initial velocity using the values calculated above, multiplied by a factor. this factor can be adjusted to determine how fast the breath will be launched, and thus how powerful it is. An alternative to this approach would be to use a separate property for power of the wolf's breath and calculate damage accordingly. However, I chose the first design as it seems more intuitive. 
+
+=======================================================
+
+PART 2: OPEN SOURCE PHYSICS ENGINE
+
+I had earlier decided to use my own physics engine for this problem set. I had implemented the circle-rectangle collision as well by the closest-point-to-circle-center method and had tested it by integrating with my game. However, i found that while the physics engine worked perfectly for lesser number of blocks (upto 8), upon adding more blocks, there was a significant lag in performance. Thus, I decided to migrate to an open source physics engine as it would overcome this problem. I used Box2D for this problem set. The advantage of migrating was better performance for larger number of blocks. the disadvantage was that I had to spend quite a bit of time in reading up on the design and usage of Box2D.
+
+* Design of Box2D: 
+
+The following are the features of Box2D which I have used in this problem set:
+	- Box2D has a b2World class, which represents the physic world. All new bodies are added to this world. Users need to initialize the world with a gravity value and the number of velocity and position iterations required using the Step(timeStep, numVelocityIterations, numPositionIterations) function.
+	- According to Box2D's manual, b2Body represent the whole body of an object, which is made of one or multiple parts (b2Fixture). The fixtures represent the colliding parts of the body (only a part of the body may be colliding) while the body represents the whole body which must move after collision.
+	- b2BodyDef is used to define the position of the body, rotation of the body and whether the body is static (e.g. wall) or dynamic (e.g. blocks). It can also be used to specify that the body must enter the "sleep" state once it finishes all collisions.
+	- b2Shape is used to specify the shape related properties of the body (eg. radius for circle objets). a number of shapes such as edges, circles and polygons are supported, with collisions for different shapes handled separately in different classes.
+	- b2FixtureDef is used to define the physical property of the body, such as restitution coefficient, friction coefficient, density and the shape (b2Shape) of the body. Thus, based on this design, different parts of a body may have different physical properties.
+	- Box2D also allows user to store a pointer to the user data that is associated with the body. For this problem set, I stored a pointer to the corresponding GameModel in the body. This helped to identify the body.
+	- Box2D also allows us to register as contact listeners. Thus, we are notified when a collison occurs are are also provided with the impulse after the collision, which fit perfectly with what was required in this problem set, as the impulse is then used to impart damage to the pig.
+
+In order to integrate Box2D, I did not have to do much as I had already integrated the game with the PS4 engine. I only had to define the bodies as described above, and add them to the Box2D world. Once done, I simulated the time step, then updated the position and states of the objects after each time step.
+
+As Box2D is an open source physics engine, its scale is much larger, and it is much more complex than the physics engine developed in PS4. It is designed to simulate a number of different scenarios (for example, a body falling to the ground to the blades of a fan colliding with surrounding objects). The design of Box2D is also more modular, with a separate "world" to simulate the bodies. This requires us to scale the positions of the objects from our local co-ordinates to physics world co-ordinates. This was missing in PS4. The world also takes the value of gravity from the user, unlike my engine. Using a separate shape class for bodies is also different. Different stages of the collision process are also modularized. 
+
+=======================================================
+
+PART 3: OBJECT-OBJECT INTERACTION:
+
+The different types of interation in my game are as follows:
+	- When a breath collides with a straw block, its power(velocity) is reduced by half. The straw block is destroyed.
+	- When a breath collides with a block other than the straw block, it is destoyed, and the block is given an impulse depending on their mass and other physical properties.
+	- When a breath collides with a pig, it is destroyed. The pig's health is reduced by an amount depending on the impulse applied by the breath.
+	- When a pig collides with another object such as a block or the ground, its health is reduced, depending on impulse.
+	- Before the user fires the first breath, collisions do not affect the objects.
+
+
+* General strategy for implementing different behaviours:
+	- The ContactListener subclass of b2ContactListener is notified after collision with the colliding bodies and the impulse imparted. The ContactListener class notifies the PlayViewController with the above details.
+	- The types of the colliding bodies are checked.
+	- If one of the colliding bodies is a breath and it collides with a body other than the straw block or walls, then its hasExpired flag is set to YES.
+	- If a straw block collides with a breath, then its hasExpired flag is set to YES. The breath's velocity is reduced.
+	- If a pig collides with a body, then its damage is calculated based on impulse and the pig's health is reduced. 
+	- Interactions between game objects must be implemented with a b2ContactListener from Box2D, since we need the impulse data between the objects and what 2 objects are colliding.
+	At the end of each time step, objects with hasExpired flag set are removed.
+
+An alternative strategy would be to check the objects at the end of each time step, and calculate damage, impulse etc from the final data values and the initial values. However, this method is not very good as it would be difficult to find out which bodies collided with each other. Therefore, I think using the b2ContactListener subclass was a good strategy as it allows us to specify an action/behaviour after a collision is completed. Therefore, the physics engine does not need to be coupled with the game's design and vice versa.
+
+=======================================================
+
+PART 4: STARTING THE GAME:
+
+In my design, the UI is handled by the ViewController, while Model classes are used to store the object data. Whenever changes are made to the model, it notifies the ViewController which updates the view. In order to integrate the physics engine, I created a new category on the PlayViewController interface., which deals with all the interactions with Box2D. On pressing the START button, the objects in the game area are first added to the Box2D world. A timer is started which is fired at every timestep. In the current implementeation, the TIMESTEP has been set to 1/60. Box2D then performs its calculations. During each timestep, I update the position and rotation of all the bodies by updating their corresponding models. The Models then notify the ViewController to update the positions of the bodies on the screen. Thus, I did not need to change my design from PS3 much to integrate the physics engine. I had to update the models to store more attributes such as velocity and impulse. 
+
+I made use of NSTimer to run the game loop using the following method:
+
+-(void)setUpTimer {
+    self.timer = [NSTimer scheduledTimerWithTimeInterval: TIMESTEP
+                                                  target: self
+                                                selector: @selector(updateObjects:)
+                                                userInfo: nil
+                                                 repeats: YES];
+}
+
+An advatage of using NSTimer is that it is easy to implement a timer such that it will fire a function at the end of every Timestep (1/60 in my case). the timer can be started and stopped easily as well, and continuously fires events.
+
+However, using NSTimer has its disadvantages. It does not create a new thread, therefore when the main thread blocks, then no events are fired. For example, while the user drags the scrollview then the objects stop moving.
+
+This problem can be solved using alternative methods such as GCD or NSThreads, where the timer is run in the background, such that while the main thread is blocking on UI operations, the timer will continue to function as expected. Using NSthreads, we can use the performSelectorInBackground method to achieve this, however a disadvantage is that we need to deal with concurrency issues. Therefore, using GCD could be a better alternative as it already manages the threads for us. We can use dispatch_queues and blocks to run the timer in the background.  
+
+=======================================================
+SECTION 3: TESTING 
+
+As an external physics engine is being used, I do not need to perform glass box testing for the physics engine methods and classes. I have treated the physics engine as a black box and performed integration testing.
+
+I have not changed the designer mode functionality from PS3. Therefore, all the test cases from that PS can be applied in this case as well. in addition, i performed some integration tetsing to check transition of views from Designer Mode to Main Screen and vice versa.
+
+The following are the tests I performed in this problem set:
+
+* Overall Integration Testing:
+
+- Test Transition between Main Screen and Play Mode
+	When the user clicks on the Play button in the main screen, the view should change to Play Mode
+		--Load Level message should be displayed
+		--Background should not contain any objects
+	When the user clicks on the Back button in the Play Mode screen, the view should change to the main view
+	The user can switch between the two views multiple times. Each time they should behave as described above.
+
+- Test Transition between Main Screen and Design Mode
+	When the user clicks on the Design button in the main screen, the view should change to Design Mode
+		--Background should not contain any objects
+	When the user clicks on the Back button in the Design Mode screen, the view should change to the main view
+	The user can switch between the two views multiple times. Each time they should behave as described above.
+
+- Test Device Rotation:
+	When the app loads initially, the view should be in landscape orientation, irrespective of device orientation.
+	Upon rotating the device, the app view should not be rotated. The default landscape orientation of the view should remain.
+
+* Play Mode:
+
+Black-box Testing:
+
+- Test Palette:
+	At the start of the game, the palette should have the following:
+		--Wolf image with 3 hearts, signifying the remaining lives of the wolf
+		--Pig image with the health bar, which should be full (green)
+		--Score: should be 000
+	The user should not be able to click on any object in the palette
+	When the wolf releases a breath, a life should be reduced
+	When the pig collides with an object, its health should reduce and score should increase
+
+- Test Load operation:
+	Load Menu should be displayed when Play Mode begins
+	No Custom Levels saved: Load Menu should display default level names
+		--Click on 'Cancel': the load box should be dismissed. The level should be empty as no level was selected.
+		--Click on Level Name: Level should be loaded. Any objects in the air should fall to ground.
+	Custom Levels Saved: Load Menu should display default levels = all custom levels saved
+	Click on Load during game: Load Menu will be displayed
+		--Click on Cancel: current game will continue
+		--Click on file name: New Level will be loaded
+	Load a level with no pig or no wolf in game area
+		--Error message will be displayed informing user that there should be atleast one wolf and one pig in the game area
+
+- Test Restart operation:
+	Click on Restart before starting game:
+		--Game started again
+	Click on Restart during game:
+		--Game started again
+	Click on Restart after game:
+		--Game started again
+	Click on Restart without loading level (When the user presses cancel while loading for the first time)
+		--Error message displayed to user
+
+- Test Game Objects:
+	All objects except the wolf in the game area should fall towards the ground under the influence of gravity
+	All objects except the wolf in the game area should interact with each other in a realistic manner
+
+- Test Wolf Operations:
+	The direction arrow and power bar should appear when the wolf is clicked once.
+	The power bar should increase and decrease continuously.
+	The user should be able to rotate the direction arrow with one finger
+	The direction arrow should become red during rotation
+	The direction arrow should not rotate when the upper and limits are reached
+	The power bar should stop when the wolf is clicked a second time.
+	The wolf should animate (inhale/exhale, windsuck) after second tap
+	When the wolf's lives are over and pig has not died, the wolf should die via animation. Game over message should be displayed.
+
+- Test Game Breath:
+	The Breath should appear when the wolf has completed inhale/exhale animation
+	The Breath should start near the mouth of the wolf
+	The Breath should a launched as a projectile, depending on the power and angle specified.
+	As the breath moves, it should leave behind its trajectory tracer
+	Collision with straw object: should move with reduced velocity (Fo testing, place several straw blocks in a row, and fire breath at them)
+	Collision with other objects: Should disappear
+		--Breath should animate while disappearing
+	If breath does not disperse within 5 seconds of firing: Should self destruct
+	If breath moves beyond the right edge of screen, the scoll view should scroll automatically with the breath
+	Collision with ground, walls: Should bounce realistically
+
+- Test Pig Operations:
+	The pig should collide realistically with all objects
+	If the user has not fired any breath: Collisions should not reduce pig's health
+	After firing first breath: all collisions should reduce pig's health
+		--The health bar in palette area should be reduced		
+		--The score should be updated
+	When Pig's health is reduced by more than half: The pig's image should be updated
+	When Pig's health is drained out: the pig should die via animation. game over message should be displayed
+
+- Test Block Operations:
+	All blocks should collide realistically with other objects
+	Blocks should move when hit by breath.
+	Straw block should disappear when hit by breath
+
+- Test Game Over Message: 
+	Check message
+		--If wolf died, the messsage should read 'You Lose'
+		--If pig died, the message should read 'You Win'
+	Check final score: should be same as score displayed in palette
+	Check button:
+		--Clicking on Load button displays load screen
+		--Clicking on restart button restarts the level
+		--Clicking on back button goes back to main screen
+
+
+Glass box Testing:
+- Test getCenter and setCenter methods in ObjectModel:
+	Perform unit testing of the above methods
+- Test if moment of inertia is calculated correctly:
+	Perform unit testing to check if moment of inertia is correct
+- Perform unit testing of all delegate methods
+- Perform unit testing of direction arrow rotation method
+- Perform unit testing of breath power method
+- Perform unit testing of pig damage method
+
+* Designer Mode:
+
+Black box testing:
+
+- Test implementation of file operations
+  --Save:
+	Save without making any changes to objects, Give valid file name : File should save successfully
+	Save without making any changes to objects, Give invalid file name (Add '/' to end of file name) : Error message should be displayed
+	Save after moving, scaling and rotating some objects, Give valid file name: File should save successfully
+	Save after moving, scaling and rotating some objects, Give empty file name: Error message should be displayed
+	Click on 'Save' button, then click on cancel: File should not be saved
+  --Load:
+	Click on 'Load' when app starts for the first time ever: Only default levels should be displayed
+	      	--Click on 'Cancel': The load box should be dismissed
+	Click on 'Load' after saving a level: the file name should be displayed
+		--Click on the file name: The level should be loaded and the load box should be dismissed
+		--Click on 'Cancel': The load box should be dismissed
+	Click on 'Load' after closing and opening the application: List of files saved so far should be displayed
+		--Click on any file name: The level should be loaded and the load box should be dismissed
+	Click on 'Load' after saving a file and moving some objects: The saved state should be reset
+		--Move some objects, then click on 'Save' and enter valid file name: The level should be re-saved
+  --Reset:
+	Click on 'Reset' without moving any objects: No changes
+		--Drag any object into game area: Size should be default size and rotation should be 0
+	Click on 'Reset' after moving, scaling, rotating some objects: All objects should be cleared from game area
+		--Drag any object into game area: Size should be default size and rotation should be 0
+	Click on 'Reset' two times: All objects should be cleared from game area
+	Click on 'Reset' after saving a file: All objects will be cleared from game area
+		--Click on 'Load' and select the file name saved last: The level should be restored
+	Click on 'Reset' after loading a file: All objects should be cleared from the game area
+		--Load same file again: The objects are restored to their saved state.
+
+- Test implementation of game objects:
+  --Drag from Palette:
+	Drag wolf from palette to some point within the palette: the wolf will return to its default position
+	Drag wolf from palette to game area: the wolf will be added to a default position in the game area. The image will also be resized. The wolf image in the palette will become faded.
+	Drag pig from palette to some point within the palette: the pig will return to its default position
+	Drag pig from palette to game area: the pig will be added to a default position in the game area. The image will also be resized. The pig image in the palette will become faded.
+	Drag block from palette to some point within the palette: the block will return to its default position
+	Drag block from palette to game area: the block will be added to a default position in the game area. The image will also be resized.
+	Drag a second block from the palette to the game area: the block will be added on top of the first block in the game area.
+	Single tap to change the block type in the palette. Drag the block from the palette to the game area. The new block will be added to the game area. The block type in the palette will change back to straw.
+  --Double tap:
+	Double tap on the wolf in the palette area: No effect
+	Double tap on the wolf in the game area: The wolf will return to its palette position
+	Double tap on the pig in the game area: The pig will return to its palette position
+	Double tap on the pig in the palette area: No effect
+	Double tap on the block in the game area: The block will disappear.
+	Double tap on the block in the palette area: No effect
+ --Single tap:
+	Single tap on the wolf in the palette area: No effect
+	Single tap on the wolf in the game area: No effect
+	Single tap on the pig in the game area: No effect
+	Single tap on the pig in the palette area: No effect
+	Single tap on the block in the game area: The block will change its type in the following order: straw->wood->stone->iron
+	Single tap on the block in the palette area: The block will change its type in the following order: straw->wood->stone->iron
+ --Rotate (Two finger Rotate):
+	Rotate the wolf in the palette area: No effect
+	Rotate the wolf clockwise in the game area: The wolf object will be rotated in clockwise direction
+	Rotate the pig anti-clockwise in the game area: The pig will be rotated in anti-clockwise direction
+	Rotate the pig in the palette area: No effect
+	Rotate the block in the game area: The block will be rotated
+	Rotate the block in the palette area: No effect
+ --Zoom (Two Finger Pinch):
+	Zoom the wolf in the palette area: No effect
+	Zoom in wolf in the game area: The wolf object will become larger. Once the maximum zoom is reached, the wolf does not become larger.
+	Zoom out the pig in the game area: The pig object will become smaller. Once the minimum zoom is reached, the pig cannot become smaller.
+	Zoom the pig in the palette area: No effect
+	Zoom in & Rotate the block in the game area simultaneously: The block will be rotated and zoomed in at the same time
+	Zoom the block in the palette area: No effect
+ --Panning in game area:
+	Drag the wolf in the game area: the wolf can be dragged to any point between the ground level and the palette boundary. 
+	Drag the wolf above the palette boundary, below the ground level, left of the left edge of the screen and right of the right edge of screen after scrolling: Unable to drag beyond these points
+	Scale the wolf to its maximum size and drag it around the game area: The wolf can be dragged anywhere within the limits defined above.
+	Drag the pig in the game area: the pig can be dragged to any point between the ground level and the palette boundary. 
+	Drag the pig above the palette boundary, below the ground level, left of the left edge of the screen and right of the right edge of screen after scrolling: Unable to drag beyond these points
+	Scale the pig to its minimum size and drag it around the game area: The pig can be dragged anywhere within the limits defined above.
+	Drag the block in the game area: the block can be dragged to any point between the ground level and the palette boundary. 
+	Drag the block above the palette boundary, below the ground level, left of the left edge of the screen and right of the right edge of screen after scrolling: Unable to drag beyond these points
+	Rotate the block and drag it around the game area: The block can be dragged anywhere within the limits defined above.
+	The game area should not scroll while panning the objects.
+
+=======================================================
+
+BELLS & WHISTLES
+
+I have implemented the following extra features in my game:
+
+*Wolf animations: inhale/exhale + wind suck + wolf die
+*Breath destruction animation
+*Pig health + Pig Die animation
+*Limited Number of Breaths for wolf
+*Health Bar + its animations for pig: Pig's Health reduced whenever it is hit
+*Animated power bar for wolf breath: power bar increases and decreases continuously
+*Added game score: Score updated whenever pig is hit
+*Added end game message: Displays final score
+*Added trajectory animation for wolf breath. The trajectory of the last breath is continued to be displayed even after breath dies. Thus the user can see where the last breath went.
+*Added automatic scrolling of view if breath goes beyond the right edge of the screen
+*Added 6 pre-programmed levels for the user to play
+*Added Game icon and Launch screen
+
+The above bells and whistles did not require me to change my original design a lot. I had to create a GameBreath class to deal with all animations required for the wolf breath. All other additions were made to the existing classes
+
+In addition to the above extra features, I have also added multiple views for my app as described previously. Thus, there are three views: Main Screen, Play Mode and Design Mode. In order to implement this feature, I had to change my change a lot. Earlier, I had a category of the GameViewController which dealt with the Play Mode. Now, i have two seperate ViewControllers: PlayViewController and DesignViewController. As these two classes have a number of common methods, I made them a subclass of GameViewController class which contains the common methods required by both.
+
+=======================================================
+
+FINAL REFLECTION
+
+I believe that my original MVC architecture was quite okay, as I have not changed the overall architecture in this problem set a lot. The fact that the model was a separate entity allowed me to integrate my game with the physics engine quite easily. The physics engine only needs to update the model, which in tuen notifies the viewController of the change, which updates the view. i had the same method in PS3 as well, where any changes in the objects' position, size etc. due to user gestures are conveyed to the model, which notifies the viewController. Thus the model remains separated from the view at all times, as is the case now as well. 
+
+Although, eventually I did not use my own physics engine in this problem set, I had integrated it with my game and it had worked well. I created seperate classes to handle circle-rectangle and circle-circle collisions and allowed the game world to add and remove bodies from the physics world. I had also implemented a delegate protocol which would enable the physics engine to notify the main game that a collision had occurred and provide the resulting impulse. However, my design for the physics engine turned out to be inefficient as the game became slow after adding more than 8-10 objects to the game.
+
+I believe that it is possible to improve the design and architecture of the game. In my current design, I have not made full use of asynchronous design patterns such as GCD and NSOperationQueues. As a result, there are certain tasks which are performed on the main thread even though they should ideally be executed on a separate thread. If I had more time, i would have tried to learn more these asynchronous design patterns and implement them properly in my game. 
+
+I also think that my design could be a lot more modularized than what it is now, especially the part concerning the multiple views. However, as this was a bells and whistles feature, i had integrated it quite late and therefore could not improve the design much.
+
+=======================================================
+
+BONUS PROBLEM: REFLECTION
+
+a. Wolf Breath+Power: 6 hours
+   Physics Engine (PS4 + box2D): 10 hours
+   Object Interactions: 2 hours
+   Start Game: 2 hours
+   Bells and Whistles: 20 hours
+   Testing + Debugging: 10 hours
+
+b. I could have learnt more about the game development process. As this was my first UI intensive application, I had to deal with problems related to memory warnings, slow response, concurrent programming etc.
+
+c. I felt that this problem set was quite complete, in the sense that we got to integrate our efforts over the past 5 weeks into an app. So, I do not think that the teaching staff could have done anything better.
+ 
+d. I believe that the problem sets were quite well-designed to guide us through the process of software development with iOS as a platform. The learning curve was indeed very steep, especially in the first couple of weeks. Initially, at times the problem sets seemed quite daunting. However, as the weeks progressed we got more used to Objective C. Therefore, the problem sets are well designed to learn software engineering and Objective C
+
+I found that the third problem set was the most challenging simply because we had to learn a lot within one week. If possible, the second problem set could be used to provide an introduction to MVC, and in the third we could just focus on implementing the MVC pattern correctly. 
+
+
+=======================================================
+
+
+
+
+
+
+	
