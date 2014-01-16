@@ -1,4 +1,6 @@
-An Angry Birds clone App developed for for an individual assignment.
+An Angry Birds clone App developed for for an individual assignment. **For iOS 5 and 6 only.**
+
+![HuffPuff](HuffPuff.png)
 
 The main objective of the game is to kill the pig. If the pig is killed before the wolf's lives run out, then the user wins. There are blocks in the way to stop the wolf's breath from reaching the pig. If the breath collides with a straw block, then the block is destroyed, while the breath's power is halved. For other blocks, the breath itself is destroyed but an impulse is imparted onto the blocks. 
 

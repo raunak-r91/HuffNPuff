@@ -346,27 +346,6 @@ I believe that it is possible to improve the design and architecture of the game
 
 I also think that my design could be a lot more modularized than what it is now, especially the part concerning the multiple views. However, as this was a bells and whistles feature, i had integrated it quite late and therefore could not improve the design much.
 
-=======================================================
-
-BONUS PROBLEM: REFLECTION
-
-a. Wolf Breath+Power: 6 hours
-   Physics Engine (PS4 + box2D): 10 hours
-   Object Interactions: 2 hours
-   Start Game: 2 hours
-   Bells and Whistles: 20 hours
-   Testing + Debugging: 10 hours
-
-b. I could have learnt more about the game development process. As this was my first UI intensive application, I had to deal with problems related to memory warnings, slow response, concurrent programming etc.
-
-c. I felt that this problem set was quite complete, in the sense that we got to integrate our efforts over the past 5 weeks into an app. So, I do not think that the teaching staff could have done anything better.
- 
-d. I believe that the problem sets were quite well-designed to guide us through the process of software development with iOS as a platform. The learning curve was indeed very steep, especially in the first couple of weeks. Initially, at times the problem sets seemed quite daunting. However, as the weeks progressed we got more used to Objective C. Therefore, the problem sets are well designed to learn software engineering and Objective C
-
-I found that the third problem set was the most challenging simply because we had to learn a lot within one week. If possible, the second problem set could be used to provide an introduction to MVC, and in the third we could just focus on implementing the MVC pattern correctly. 
-
-
-=======================================================
 
 
 
